@@ -1,4 +1,4 @@
-﻿# Groq (Llama 3) Yapay Zeka bağlantısını burada yaptım.
+# Groq (Llama 3) Yapay Zeka bağlantısını burada yaptım.
 # Yapay zeka bu kütüphane üzerinden yemeklerin kalorisini tahmin ediyor.
 
 import json
@@ -30,9 +30,9 @@ def yemek_analiz_et(yemek_adi):
         # Groq istemcisini baslat
         client = Groq(api_key=API_ANAHTARI)
 
-        istem = f"`"Sen bir diyetisyen asistanısın. Aşağıdaki yemek/porsiyon için besin değerlerini tahmin et: "{yemek_adi}"
+        istem = f"""Sen bir diyetisyen asistanısın. Aşağıdaki yemek/porsiyon için besin değerlerini tahmin et: "{yemek_adi}"
 SADECE JSON formatında yanıt ver, başka hiçbir kelime ekleme:
-{{"kalori": 100, "protein": 10, "karbonhidrat": 10, "yag": 10}}"`"
+{{"kalori": 100, "protein": 10, "karbonhidrat": 10, "yag": 10}}"""
 
         # API'ye istek gonder
         chat_completion = client.chat.completions.create(
@@ -70,9 +70,9 @@ def spor_analiz_et(spor_adi):
         # Groq istemcisini baslat
         client = Groq(api_key=API_ANAHTARI)
 
-        istem = f"`"Sen bir fitness uzmanısın. Aşağıdaki spor/egzersiz için ortalama bir kişinin yakacağı kaloriyi tahmin et: "{spor_adi}"
+        istem = f"""Sen bir fitness uzmanısın. Aşağıdaki spor/egzersiz için ortalama bir kişinin yakacağı kaloriyi tahmin et: "{spor_adi}"
 SADECE JSON formatında yanıt ver, başka hiçbir kelime ekleme:
-{{"sure_dk": 30, "yakilan_kalori": 200}}"`"
+{{"sure_dk": 30, "yakilan_kalori": 200}}"""
 
         # API'ye istek gonder
         chat_completion = client.chat.completions.create(
