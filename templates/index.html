@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kaç Kalori — AI ile Kalori Takibi</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:       #FF3B30;
+      --red-soft:  #FF6961;
+      --red-glow:  rgba(255,59,48,0.18);
+      --red-pale:  rgba(255,59,48,0.07);
+      --black:     #1D1D1F;
+      --grey:      #6E6E73;
+      --silver:    #F5F5F7;
+      --white:     #FFFFFF;
+      --border:    rgba(0,0,0,0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--white);
+      color: var(--black);
+      overflow-x: hidden;
+    }
+
+    /* ── SPLASH SCREEN ─────────────────────────── */
+    #splash {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 24px;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    #splash.hide { opacity: 0; pointer-events: none; transform: scale(1.04); }
+
+    .splash-logo {
+      display: flex; align-items: center; gap: 14px;
+      animation: splashFadeIn 0.8s ease forwards;
+      opacity: 0;
+    }
+    .splash-icon {
+      width: 64px; height: 64px;
+      background: var(--red);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 12px 40px rgba(255,59,48,0.35);
+      animation: splashPulse 1.4s ease-in-out infinite;
+    }
+    .splash-icon svg { width: 36px; height: 36px; fill: white; }
+    .splash-wordmark { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+    .splash-wordmark span { color: var(--red); }
+
+    .splash-bar-wrap {
+      width: 180px; height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      animation: splashFadeIn 0.8s 0.3s ease forwards;
+      opacity: 0;
+    }
+    .splash-bar {
+      height: 100%; width: 0;
+      background: var(--red);
+      border-radius: 2px;
+      animation: splashLoad 1.6s 0.5s cubic-bezier(.4,0,.2,1) forwards;
+    }
+    .splash-tagline {
+      font-size: 13px; color: var(--grey); letter-spacing: 0.5px; font-weight: 400;
+      animation: splashFadeIn 0.8s 0.6s ease forwards; opacity: 0;
+    }
+
+    @keyframes splashFadeIn { to { opacity: 1; } }
+    @keyframes splashLoad   { to { width: 100%; } }
+    @keyframes splashPulse  {
+      0%,100% { box-shadow: 0 12px 40px rgba(255,59,48,0.35); transform: scale(1); }
+      50%     { box-shadow: 0 16px 55px rgba(255,59,48,0.5);  transform: scale(1.04); }
+    }
+
+    /* ── NAV ───────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 52px;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(20px) saturate(1.8);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 40px;
+      opacity: 0;
+      animation: navSlideIn 0.5s 2.4s ease forwards;
+    }
+    @keyframes navSlideIn { to { opacity: 1; } }
+
+    .nav-inner {
+      width: 100%; max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+    .nav-logo-dot {
+      width: 22px; height: 22px;
+      background: var(--red); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-logo-dot svg { width: 13px; height: 13px; fill: white; }
+    .nav-logo-text { font-size: 15px; font-weight: 600; color: var(--black); letter-spacing: -0.2px; }
+    .nav-logo-text span { color: var(--red); }
+
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      font-size: 13px; font-weight: 400; color: var(--grey);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--black); }
+
+    .nav-cta {
+      background: var(--red); color: white;
+      font-size: 13px; font-weight: 500;
+      padding: 7px 18px; border-radius: 20px;
+      text-decoration: none; letter-spacing: 0.1px;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+    .nav-cta:hover {
+      background: #e02e24; transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(255,59,48,0.3);
+    }
+
+    /* ── HERO ──────────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+      padding-top: 52px;
+      background: #0a0a0b;
+    }
+
+    /* ── CINEMATIC BACKGROUND ── */
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+      overflow: hidden;
+    }
+
+    /* Deep atmospheric smoke layers */
+    .smoke-layer {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+    }
+    .smoke-1 {
+      width: 900px; height: 700px;
+      background: radial-gradient(ellipse, rgba(180,20,12,0.55) 0%, rgba(100,8,4,0.3) 40%, transparent 70%);
+      top: -180px; right: -180px;
+      animation: smokeFloat1 12s ease-in-out infinite alternate;
+    }
+    .smoke-2 {
+      width: 600px; height: 500px;
+      background: radial-gradient(ellipse, rgba(255,59,48,0.2) 0%, rgba(150,30,20,0.15) 50%, transparent 70%);
+      bottom: -100px; left: -100px;
+      animation: smokeFloat2 15s ease-in-out infinite alternate;
+    }
+    .smoke-3 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,80,60,0.12) 0%, transparent 65%);
+      top: 40%; left: 35%;
+      animation: smokeFloat3 9s ease-in-out infinite alternate;
+    }
+    .smoke-4 {
+      width: 700px; height: 300px;
+      background: radial-gradient(ellipse, rgba(80,5,3,0.6) 0%, transparent 70%);
+      bottom: 0; right: 0;
+      filter: blur(80px);
+    }
+    @keyframes smokeFloat1 { to { transform: translate(30px, 50px) scale(1.06); opacity: 0.85; } }
+    @keyframes smokeFloat2 { to { transform: translate(40px, -30px) scale(0.94); } }
+    @keyframes smokeFloat3 { to { transform: translate(-20px, 20px) scale(1.1); } }
+
+    /* Bottom fade to white (page transition) */
+    .hero-fade-bottom {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 220px; z-index: 3;
+      background: linear-gradient(to bottom, transparent, #0a0a0b 60%, #ffffff);
+      pointer-events: none;
+    }
+
+    /* ── RUNNER SVG FIGURE ── */
+    .runner-wrap {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .runner-img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center;
+      opacity: 0;
+      filter: contrast(1.08) brightness(0.65);
+      animation: runnerReveal 1.6s 2.3s cubic-bezier(.2,0,.3,1) forwards;
+    }
+    @keyframes runnerReveal {
+      from { opacity: 0; transform: scale(1.03); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* Runner edge fade — blends into bg */
+    .runner-fade {
+      position: absolute; inset: 0; z-index: 2;
+      background: linear-gradient(
+        to right,
+        #0a0a0b 0%,
+        rgba(10,10,11,0.85) 30%,
+        rgba(10,10,11,0.4) 60%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+    .runner-top-fade {
+      position: absolute; top: 0; left: 0; right: 0; height: 160px; z-index: 2;
+      background: linear-gradient(to bottom, #0a0a0b, transparent);
+      pointer-events: none;
+    }
+
+    /* Particle dots */
+    .particles {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none;
+      overflow: hidden;
+    }
+    .particle {
+      position: absolute; border-radius: 50%;
+      background: rgba(255,59,48,0.7);
+      animation: particleDrift linear infinite;
+    }
+
+    /* Brand tags (reference design corner labels) */
+    .brand-tags {
+      position: absolute; top: 50%; right: 44px; transform: translateY(-50%);
+      z-index: 4; text-align: right;
+      opacity: 0; animation: heroEl 0.6s 3.2s ease forwards;
+    }
+    .brand-tag {
+      font-size: 10px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: rgba(255,255,255,0.35);
+      line-height: 1.9;
+    }
+    .brand-tag.active { color: rgba(255,255,255,0.75); }
+
+    /* Horizontal rule line (reference design accent) */
+    .hero-rule {
+      position: absolute; bottom: 120px; left: 0; right: 0; z-index: 4;
+      height: 1px;
+      background: linear-gradient(to right, transparent 0%, rgba(255,59,48,0.4) 30%, rgba(255,59,48,0.15) 70%, transparent 100%);
+      opacity: 0; animation: heroEl 0.8s 3.4s ease forwards;
+    }
+
+    /* Discount strip (reference design) */
+    .hero-strip {
+      position: absolute; bottom: 78px; left: 0; right: 0; z-index: 4;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      opacity: 0; animation: heroEl 0.6s 3.5s ease forwards;
+    }
+    .hero-strip-label {
+      font-size: 12px; color: rgba(255,255,255,0.45); letter-spacing: 0.5px;
+    }
+    .hero-strip-value {
+      font-size: 13px; font-weight: 700; letter-spacing: 2px;
+      color: white; text-transform: uppercase;
+    }
+
+    /* nav adjustments for dark hero */
+    nav.dark-hero {
+      background: rgba(10,10,11,0.7);
+      border-bottom-color: rgba(255,255,255,0.06);
+    }
+    nav.dark-hero .nav-links a { color: rgba(255,255,255,0.55); }
+    nav.dark-hero .nav-links a:hover { color: white; }
+    nav.dark-hero .nav-logo-text { color: white; }
+
+    /* ── CONTENT OVER DARK BG ── */
+    .hero-content {
+      position: relative; z-index: 5;
+      max-width: 1200px; width: 100%;
+      margin: 0 auto; padding: 0 48px;
+      display: grid; grid-template-columns: 1fr 1fr;
+      align-items: center; gap: 60px;
+    }
+
+    .hero-text { }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 600; letter-spacing: 1.8px;
+      text-transform: uppercase; color: rgba(255,255,255,0.5);
+      margin-bottom: 20px;
+      opacity: 0; animation: heroEl 0.7s 2.5s ease forwards;
+    }
+    .hero-eyebrow-dot {
+      width: 5px; height: 5px; background: var(--red); border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.4; transform: scale(1.5); }
+    }
+
+    .hero-title {
+      font-size: clamp(44px, 5.5vw, 72px);
+      font-weight: 800; line-height: 1.04;
+      letter-spacing: -2.5px; color: #ffffff;
+      opacity: 0; animation: heroEl 0.7s 2.65s ease forwards;
+    }
+    .hero-title .accent { color: var(--red); display: block; }
+
+    .hero-sub {
+      font-size: 16px; line-height: 1.75;
+      color: rgba(255,255,255,0.45); font-weight: 400;
+      margin-top: 20px; max-width: 380px;
+      opacity: 0; animation: heroEl 0.7s 2.8s ease forwards;
+    }
+
+    .hero-actions {
+      display: flex; gap: 12px; align-items: center;
+      margin-top: 36px;
+      opacity: 0; animation: heroEl 0.7s 2.95s ease forwards;
+    }
+    .btn-primary {
+      background: var(--red); color: white;
+      font-size: 15px; font-weight: 600;
+      padding: 14px 28px; border-radius: 50px;
+      text-decoration: none; border: none; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 8px 40px rgba(255,59,48,0.45);
+      letter-spacing: 0.1px;
+    }
+    .btn-primary:hover {
+      background: #e02e24; transform: translateY(-2px);
+      box-shadow: 0 16px 50px rgba(255,59,48,0.55);
+    }
+    .btn-primary svg { width: 16px; height: 16px; fill: white; }
+
+    .btn-ghost {
+      font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.5);
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: gap 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { gap: 10px; color: white; }
+    .btn-ghost svg { width: 14px; height: 14px; stroke: currentColor; fill: none; }
+
+    .hero-stats {
+      display: flex; gap: 36px; margin-top: 52px;
+      padding-top: 36px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      opacity: 0; animation: heroEl 0.7s 3.1s ease forwards;
+    }
+    .hero-stat-num {
+      font-size: 28px; font-weight: 800; letter-spacing: -1px; color: #ffffff;
+      line-height: 1;
+    }
+    .hero-stat-num .unit { font-size: 13px; font-weight: 600; color: var(--red); }
+    .hero-stat-label { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 4px; letter-spacing: 0.3px; }
+
+    /* ── GLASS CARDS (dark variant) ── */
+    .hero-visual {
+      display: flex; flex-direction: column; gap: 12px;
+      opacity: 0; animation: heroEl 0.8s 2.8s ease forwards;
+    }
+
+    .card-glass {
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 22px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card-glass:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,0.16);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.35); }
+    .card-badge {
+      font-size: 10px; font-weight: 600; padding: 3px 8px;
+      background: rgba(255,59,48,0.2); color: #FF6961; border-radius: 10px;
+    }
+
+    .ring-wrap { display: flex; align-items: center; gap: 20px; }
+    .ring-svg { width: 76px; height: 76px; flex-shrink: 0; }
+    .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 6; }
+    .ring-fill {
+      fill: none; stroke: var(--red); stroke-width: 6;
+      stroke-linecap: round;
+      stroke-dasharray: 188; stroke-dashoffset: 188;
+      transform-origin: center; transform: rotate(-90deg);
+      animation: ringFill 1.6s 3.2s cubic-bezier(.4,0,.2,1) forwards;
+    }
+    @keyframes ringFill { to { stroke-dashoffset: 47; } }
+
+    .ring-kcal { font-size: 28px; font-weight: 700; letter-spacing: -1px; line-height: 1; color: white; }
+    .ring-kcal span { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.4); }
+    .ring-goal { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 5px; }
+
+    .macro-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 16px; }
+    .macro-item { text-align: center; }
+    .macro-bar-wrap {
+      height: 3px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 6px;
+    }
+    .macro-bar {
+      height: 100%; border-radius: 4px;
+      width: 0; animation: macroFill 1.2s 3.4s ease forwards;
+    }
+    .macro-bar.p { background: var(--red); }
+    .macro-bar.c { background: #FF9500; }
+    .macro-bar.f { background: #34C759; }
+    @keyframes macroFill { to { width: var(--w); } }
+    .macro-val { font-size: 13px; font-weight: 600; color: white; }
+    .macro-lbl { font-size: 10px; color: rgba(255,255,255,0.3); }
+
+    /* AI scan card */
+    .ai-card { display: flex; align-items: center; gap: 14px; }
+    .ai-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: rgba(255,59,48,0.25);
+      border: 1px solid rgba(255,59,48,0.3);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ai-icon svg { width: 20px; height: 20px; fill: var(--red); }
+    .ai-text { flex: 1; }
+    .ai-title { font-size: 13px; font-weight: 600; color: white; }
+    .ai-sub { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    .ai-chip {
+      font-size: 10px; font-weight: 700; color: var(--red);
+      background: rgba(255,59,48,0.15); padding: 3px 9px; border-radius: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Scan animation */
+    .scan-line {
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+      margin-top: 14px;
+      animation: scanAnim 2.2s 3.5s ease-in-out infinite;
+    }
+    @keyframes scanAnim {
+      0%   { transform: translateY(0);   opacity: 0.8; }
+      100% { transform: translateY(36px); opacity: 0; }
+    }
+
+    @keyframes heroEl { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes particleDrift {
+      0%   { transform: translateY(0) translateX(0); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 0.8; }
+      100% { transform: translateY(-120vh) translateX(var(--dx)); opacity: 0; }
+    }
+
+    /* ── HOW IT WORKS ──────────────────────────── */
+    #how {
+      padding: 120px 40px;
+      background: var(--silver);
+      overflow: hidden;
+    }
+    .section-center { max-width: 1200px; margin: 0 auto; }
+    .section-eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--red); margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 700; letter-spacing: -1.5px; color: var(--black);
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 16px; line-height: 1.7; color: var(--grey);
+      max-width: 520px;
+    }
+
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 20px;
+      margin-top: 64px;
+    }
+    .step-card {
+      background: var(--white); border-radius: 20px;
+      padding: 32px; border: 1px solid var(--border);
+      position: relative; overflow: hidden;
+      opacity: 0; transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease, box-shadow 0.3s ease;
+    }
+    .step-card:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.07); transform: translateY(-4px) !important; }
+    .step-card.visible { opacity: 1; transform: translateY(0); }
+    .step-card:nth-child(2) { transition-delay: 0.12s; }
+    .step-card:nth-child(3) { transition-delay: 0.24s; }
+
+    .step-num {
+      font-size: 64px; font-weight: 800; letter-spacing: -3px;
+      color: var(--red); opacity: 0.08; line-height: 1;
+      position: absolute; top: 16px; right: 24px;
+    }
+    .step-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: var(--red-pale); display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .step-icon svg { width: 24px; height: 24px; fill: var(--red); }
+    .step-title { font-size: 18px; font-weight: 650; margin-bottom: 10px; letter-spacing: -0.3px; }
+    .step-desc { font-size: 14px; line-height: 1.65; color: var(--grey); }
+
+    /* ── FEATURES ──────────────────────────────── */
+    #features {
+      padding: 120px 40px;
+      background: var(--white);
+    }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+      margin-top: 64px;
+    }
+    .feat-card {
+      border-radius: 20px; padding: 36px;
+      border: 1px solid var(--border);
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .feat-card.visible { opacity: 1; transform: translateY(0); }
+    .feat-card:nth-child(2) { transition-delay: 0.1s; }
+    .feat-card:nth-child(3) { transition-delay: 0.2s; }
+    .feat-card:nth-child(4) { transition-delay: 0.3s; }
+    .feat-card:hover { background: var(--silver); }
+
+    .feat-card.highlight {
+      background: var(--black); border-color: var(--black);
+      grid-column: span 2;
+      display: flex; align-items: center; gap: 48px;
+    }
+    .feat-card.highlight .feat-title { color: white; }
+    .feat-card.highlight .feat-desc  { color: rgba(255,255,255,0.55); }
+
+    .feat-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--red-pale); display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px; flex-shrink: 0;
+    }
+    .feat-card.highlight .feat-icon { background: rgba(255,59,48,0.2); }
+    .feat-icon svg { width: 22px; height: 22px; fill: var(--red); }
+    .feat-title { font-size: 18px; font-weight: 650; letter-spacing: -0.3px; margin-bottom: 10px; }
+    .feat-desc  { font-size: 14px; line-height: 1.7; color: var(--grey); }
+
+    .highlight-visual {
+      flex: 1; display: flex; gap: 10px; justify-content: flex-end;
+    }
+    .mini-chart { display: flex; align-items: flex-end; gap: 6px; }
+    .bar {
+      width: 20px; border-radius: 4px 4px 0 0;
+      background: rgba(255,255,255,0.15);
+      transition: height 0.3s ease;
+    }
+    .bar.active { background: var(--red); }
+
+    /* ── CTA ───────────────────────────────────── */
+    #cta {
+      padding: 120px 40px;
+      background: var(--black);
+      text-align: center; overflow: hidden; position: relative;
+    }
+    .cta-glow {
+      position: absolute; width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(255,59,48,0.2) 0%, transparent 60%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: ctaGlow 4s ease-in-out infinite alternate;
+    }
+    @keyframes ctaGlow { to { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; } }
+
+    .cta-inner { position: relative; z-index: 1; }
+    .cta-title {
+      font-size: clamp(36px, 5vw, 60px); font-weight: 700;
+      letter-spacing: -2px; color: white; margin-bottom: 16px;
+    }
+    .cta-title span { color: var(--red); }
+    .cta-sub { font-size: 17px; color: rgba(255,255,255,0.5); margin-bottom: 36px; }
+
+    /* ── FOOTER ────────────────────────────────── */
+    footer {
+      padding: 40px; background: var(--black);
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .footer-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .footer-logo { display: flex; align-items: center; gap: 8px; }
+    .footer-logo-dot {
+      width: 18px; height: 18px; background: var(--red); border-radius: 5px;
+    }
+    .footer-logo-text { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6); }
+    .footer-copy { font-size: 12px; color: rgba(255,255,255,0.3); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 12px; color: rgba(255,255,255,0.4); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── RESPONSIVE ────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero-content { grid-template-columns: 1fr; gap: 48px; }
+      .steps-grid   { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      .feat-card.highlight { flex-direction: column; grid-column: span 1; }
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      #hero, #how, #features, #cta { padding-left: 20px; padding-right: 20px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">
+    <div class="splash-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-4H9l3-8 3 8h-2v4z"/></svg>
+    </div>
+    <div class="splash-wordmark">Kaç <span>Kalori</span></div>
+  </div>
+  <div class="splash-bar-wrap"><div class="splash-bar"></div></div>
+  <div class="splash-tagline">yapay zeka destekli kalori takibi</div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/app">
+      <div class="nav-logo-dot">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-4H9l3-8 3 8h-2v4z"/></svg>
+      </div>
+      <span class="nav-logo-text">Kaç <span>Kalori</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#how">Nasıl Çalışır</a></li>
+      <li><a href="#features">Özellikler</a></li>
+      <li><a href="/app">Uygulamaya Git</a></li>
+    </ul>
+    <a class="nav-cta" href="/app">Ücretsiz Başla</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg">
+    <!-- Atmospheric smoke/glow layers -->
+    <div class="smoke-layer smoke-1"></div>
+    <div class="smoke-layer smoke-2"></div>
+    <div class="smoke-layer smoke-3"></div>
+    <div class="smoke-layer smoke-4"></div>
+
+    <!-- Floating particles -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Runner figure — real photo -->
+    <div class="runner-wrap">
+      <img class="runner-img" src="/static/images/runner.jpg" alt="Runner" />
+    </div>
+    
+    <div class="runner-fade"></div>
+    <div class="runner-top-fade"></div>
+
+    <!-- Brand tags (top-right, like reference design) -->
+    <div class="brand-tags">
+      <div class="brand-tag">Gemini AI</div>
+      <div class="brand-tag active">Kalori Takibi</div>
+      <div class="brand-tag">Türkçe Destek</div>
+    </div>
+
+    <!-- Bottom strip (like reference: "UP TO 45% OFF") -->
+    <div class="hero-rule"></div>
+    <div class="hero-strip">
+      <span class="hero-strip-label">yapay zeka ile anlık analiz</span>
+      <span class="hero-strip-value">98% DOĞRULUK</span>
+    </div>
+
+    <!-- Page transition fade to white -->
+    <div class="hero-fade-bottom"></div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-text">
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        Gemini AI destekli
+      </div>
+      <h1 class="hero-title">
+        Ne yedim,<br>
+        <span class="accent">kaç kalori?</span>
+      </h1>
+      <p class="hero-sub">
+        Yediğin yemeği veya yaptığını sporu yaz, AI tanısın. Anlık kalori ve makro bilgisi, günlük takip - hepsi
+        bir arada.
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="/app">
+          <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          Hemen Başla
+        </a>
+        <a class="btn-ghost" href="#how">
+          Nasıl çalışır
+          <svg viewBox="0 0 24 24" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-num">2M<span class="unit">+</span></div>
+          <div class="hero-stat-label">Yemek veritabanı</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">98<span class="unit">%</span></div>
+          <div class="hero-stat-label">Tanıma doğruluğu</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">3<span class="unit">sn</span></div>
+          <div class="hero-stat-label">Sonuç süresi</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <!-- Kalori ring card -->
+      <div class="card-glass">
+        <div class="card-top">
+          <span class="card-label">Bugün</span>
+          <span class="card-badge">Pazartesi</span>
+        </div>
+        <div class="ring-wrap">
+          <svg class="ring-svg" viewBox="0 0 80 80">
+            <circle class="ring-bg"  cx="40" cy="40" r="30"/>
+            <circle class="ring-fill" cx="40" cy="40" r="30"/>
+          </svg>
+          <div class="ring-info">
+            <div class="ring-kcal">1847 <span>kcal</span></div>
+            <div class="ring-goal">Hedef: 2200 kcal — %75</div>
+          </div>
+        </div>
+        <div class="macro-row">
+          <div class="macro-item">
+            <div class="macro-bar-wrap"><div class="macro-bar p" style="--w:72%"></div></div>
+            <div class="macro-val">118g</div>
+            <div class="macro-lbl">Protein</div>
+          </div>
+          <div class="macro-item">
+            <div class="macro-bar-wrap"><div class="macro-bar c" style="--w:58%"></div></div>
+            <div class="macro-val">224g</div>
+            <div class="macro-lbl">Karb.</div>
+          </div>
+          <div class="macro-item">
+            <div class="macro-bar-wrap"><div class="macro-bar f" style="--w:44%"></div></div>
+            <div class="macro-val">61g</div>
+            <div class="macro-lbl">Yağ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI scan card -->
+      <div class="card-glass">
+        <div class="ai-card">
+          <div class="ai-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+          </div>
+          <div class="ai-text">
+            <div class="ai-title">AI Metin Tanıma</div>
+            <div class="ai-sub">Izgara tavuk + pilav algılandı — 485 kcal</div>
+          </div>
+          <div class="ai-chip">Gemini</div>
+        </div>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-center">
+    <div class="section-eyebrow">Nasıl Çalışır</div>
+    <h2 class="section-title">Üç adımda<br>kalori takibi</h2>
+    <p class="section-sub">Karmaşık tablo yok, yorucu arama yok. Sadece yemeğini yaz, gerisi otomatik.</p>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </div>
+        <h3 class="step-title">Yemeğini Yaz</h3>
+        <p class="step-desc">Tükettiğin yemeği veya sporu yaz. Gemini AI anında tanır, içeriğini analiz eder.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </div>
+        <h3 class="step-title">AI Analiz Eder</h3>
+        <p class="step-desc">Kalori, protein, karbonhidrat ve yağ değerleri hesaplanır. 2 milyondan fazla yemek veritabanına erişim.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+        </div>
+        <h3 class="step-title">Takip Et</h3>
+        <p class="step-desc">Günlük, haftalık ve aylık istatistiklerinle hedefine ne kadar yakın olduğunu gör.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-center">
+    <div class="section-eyebrow">Özellikler</div>
+    <h2 class="section-title">Her şey burada</h2>
+    <p class="section-sub">Sağlıklı yaşam için ihtiyacın olan tüm araçlar tek bir uygulamada.</p>
+
+    <div class="features-grid">
+      <div class="feat-card highlight">
+        <div>
+          <div class="feat-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+          </div>
+          <h3 class="feat-title">Gemini AI ile Anlık Analiz</h3>
+          <p class="feat-desc">Google'ın güçlü AI modeli Gemini, yazdığın yemeği anlar ve besin değerlerini hesaplar. Türk mutfağına özel optimize edilmiş model.</p>
+        </div>
+        <div class="highlight-visual">
+          <div class="mini-chart">
+            <div class="bar" style="height:30px"></div>
+            <div class="bar active" style="height:55px"></div>
+            <div class="bar" style="height:40px"></div>
+            <div class="bar active" style="height:70px"></div>
+            <div class="bar" style="height:45px"></div>
+            <div class="bar active" style="height:60px"></div>
+            <div class="bar" style="height:35px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+        </div>
+        <h3 class="feat-title">Günlük Kalori Hedefi</h3>
+        <p class="feat-desc">Boy, kilo ve aktivite seviyene göre kişiselleştirilmiş kalori hedefi. Gerçek zamanlı ilerleme takibi.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+        </div>
+        <h3 class="feat-title">Makro Takibi</h3>
+        <p class="feat-desc">Protein, karbonhidrat ve yağ dengeni görsel grafiklerle takip et. Hedef makrolarını özelleştir.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </div>
+        <h3 class="feat-title">Spor Takibi</h3>
+        <p class="feat-desc">Günlük su tüketimini takip et, hatırlatıcılar al. Sağlıklı bir yaşam için hidrasyon şart.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="cta-glow"></div>
+  <div class="cta-inner section-center">
+    <h2 class="cta-title">Sağlıklı yaşam<br><span>bugün başlar</span></h2>
+    <p class="cta-sub">Ücretsiz hesap oluştur, Gemini AI'nin gücünü hemen keşfet.</p>
+    <a class="btn-primary" href="/app" style="display:inline-flex; font-size:16px; padding:16px 36px;">
+      <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      Ücretsiz Başla
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <div class="footer-logo-dot"></div>
+      <span class="footer-logo-text">Kaç Kalori</span>
+    </div>
+    <span class="footer-copy">© 2026 Kaç Kalori — İleri Programlama Final Projesi. Tüm hakları saklıdır.</span>
+    <div class="footer-links">
+      <a href="/app">Uygulamaya Git</a>
+      
+      
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Splash screen
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      document.getElementById('splash').classList.add('hide');
+      setTimeout(() => document.getElementById('splash').remove(), 700);
+    }, 2200);
+  });
+
+  // Nav — dark over hero, light on scroll into page
+  const nav = document.querySelector('nav');
+  const hero = document.getElementById('hero');
+  nav.classList.add('dark-hero');
+
+  window.addEventListener('scroll', () => {
+    const heroBottom = hero.offsetHeight;
+    if (window.scrollY > heroBottom - 100) {
+      nav.classList.remove('dark-hero');
+      nav.style.background = 'rgba(255,255,255,0.92)';
+      nav.style.borderBottomColor = 'rgba(0,0,0,0.08)';
+    } else {
+      nav.classList.add('dark-hero');
+      nav.style.background = 'rgba(10,10,11,0.7)';
+      nav.style.borderBottomColor = 'rgba(255,255,255,0.06)';
+    }
+  });
+
+  // Floating particles
+  const pWrap = document.getElementById('particles');
+  for (let i = 0; i < 22; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 3 + 1;
+    const x = Math.random() * 100;
+    const dur = Math.random() * 12 + 8;
+    const delay = Math.random() * 10;
+    const dx = (Math.random() - 0.5) * 120;
+    p.style.cssText = `
+      left:${x}%; bottom:${Math.random()*30}%;
+      width:${size}px; height:${size}px;
+      --dx:${dx}px;
+      animation-duration:${dur}s;
+      animation-delay:${delay}s;
+      opacity:${Math.random()*0.5+0.2};
+    `;
+    pWrap.appendChild(p);
+  }
+
+  // Scroll reveal for cards
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.step-card, .feat-card').forEach(el => observer.observe(el));
+
+  // Animated mini chart bars
+  const bars = document.querySelectorAll('.mini-chart .bar');
+  const heights = [30,55,40,70,45,60,35];
+  bars.forEach((b,i) => { b.style.height = heights[i]+'px'; });
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+veri/
+.env
+venv/
+.agents/
+sartname.pdf
