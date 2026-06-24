@@ -37,7 +37,7 @@ SADECE JSON formatında yanıt ver, başka hiçbir kelime ekleme:
         # API'ye istek gonder
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": istem}],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             response_format={"type": "json_object"},
             temperature=0.2,
         )
@@ -77,7 +77,7 @@ SADECE JSON formatında yanıt ver, başka hiçbir kelime ekleme:
         # API'ye istek gonder
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": istem}],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             response_format={"type": "json_object"},
             temperature=0.2,
         )
