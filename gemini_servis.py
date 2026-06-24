@@ -1,14 +1,12 @@
-# Google Gemini Yapay Zeka bağlantısını burada yaptım.
+﻿# Groq (Llama 3) Yapay Zeka bağlantısını burada yaptım.
 # Yapay zeka bu kütüphane üzerinden yemeklerin kalorisini tahmin ediyor.
 
 import json
 import os
-
 from models import Ogun, Spor
 
-# Railwayden aldığımız şifreyi okuyoruz
-API_ANAHTARI = os.environ.get("GEMINI_API_KEY", "")
-
+# Railwayden aldığımız şifreyi okuyoruz (Kolaylık olsun diye eski değişkenden de okuyabilir)
+API_ANAHTARI = os.environ.get("GROQ_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 
 def api_anahtari_var_mi():
     # Sistemde anahtar var mı diye bakıyoruz
@@ -17,48 +15,36 @@ def api_anahtari_var_mi():
     else:
         return False
 
-
 def yemek_analiz_et(yemek_adi):
     # Bu kısmı yazarken yapay zekadan yardım aldım
     # Yemeği sorup cevap alıyoruz
-    # bos girdi kontrolu
     if not yemek_adi or yemek_adi.strip() == "":
         return None, "Yemek adı boş olamaz."
 
-    # API anahtari kontrolu
     if not api_anahtari_var_mi():
-        return None, "GEMINI_API_KEY tanımlı değil. Ortam değişkenini ayarlayın."
+        return None, "Yapay Zeka API anahtarı eksik."
 
     try:
-        # kutuphaneyi import et
-        import google.generativeai as genai
+        from groq import Groq
+        
+        # Groq istemcisini baslat
+        client = Groq(api_key=API_ANAHTARI)
 
-        # API'yi yapilandir
-        genai.configure(api_key=API_ANAHTARI)
-        model = genai.GenerativeModel("gemini-2.0-flash")
-
-        # Gemini'ye gonderilecek prompt
-        istem = """Sen bir diyetisyen asistanısın. Aşağıdaki yemek/porsiyon için
-besin değerlerini tahmin et: "{}"
-
-SADECE şu JSON formatında yanıt ver, başka hiçbir açıklama ekleme:
-{{"kalori": <sayı>, "protein": <gram>, "karbonhidrat": <gram>, "yag": <gram>}}""".format(yemek_adi)
+        istem = f"`"Sen bir diyetisyen asistanısın. Aşağıdaki yemek/porsiyon için besin değerlerini tahmin et: "{yemek_adi}"
+SADECE JSON formatında yanıt ver, başka hiçbir kelime ekleme:
+{{"kalori": 100, "protein": 10, "karbonhidrat": 10, "yag": 10}}"`"
 
         # API'ye istek gonder
-        yanit = model.generate_content(istem)
-        metin = yanit.text.strip()
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": istem}],
+            model="llama3-8b-8192",
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
 
-        # ```json ... ``` kod blogunu temizle
-        if metin.startswith("```"):
-            metin = metin.strip("`")
-            if metin.lower().startswith("json"):
-                metin = metin[4:]
-        metin = metin.strip()
-
-        # JSON'u parse et
+        metin = chat_completion.choices[0].message.content.strip()
         veri = json.loads(metin)
 
-        # Ogun nesnesi olustur
         ogun = Ogun(
             yemek_adi=yemek_adi,
             kalori=veri.get("kalori", 0),
@@ -66,70 +52,45 @@ SADECE şu JSON formatında yanıt ver, başka hiçbir açıklama ekleme:
             karbonhidrat=veri.get("karbonhidrat", 0),
             yag=veri.get("yag", 0),
         )
-        return ogun, "Gemini AI ile analiz edildi."
+        return ogun, "Yapay Zeka ile analiz edildi."
 
-    except ImportError:
-        return None, "google-generativeai kütüphanesi kurulu değil. 'pip install google-generativeai' çalıştırın."
-    except json.JSONDecodeError:
-        return None, "Gemini yanıtı işlenemedi (geçersiz format)."
     except Exception as hata:
-        return None, "Gemini API hatası: " + str(hata)
-
+        return None, "Yapay Zeka API hatası: " + str(hata)
 
 def spor_analiz_et(spor_adi):
-    """
-    Gemini API'ye spor/egzersiz bilgisini gonderir, yakilan kalori tahmini alir.
-    Geriye (Spor nesnesi, mesaj) veya (None, hata mesaji) doner.
-    """
-    # bos girdi kontrolu
     if not spor_adi or spor_adi.strip() == "":
         return None, "Spor adı boş olamaz."
 
-    # API anahtari kontrolu
     if not api_anahtari_var_mi():
-        return None, "GEMINI_API_KEY tanımlı değil. Ortam değişkenini ayarlayın."
+        return None, "Yapay Zeka API anahtarı eksik."
 
     try:
-        # kutuphaneyi import et
-        import google.generativeai as genai
+        from groq import Groq
+        
+        # Groq istemcisini baslat
+        client = Groq(api_key=API_ANAHTARI)
 
-        # API'yi yapilandir
-        genai.configure(api_key=API_ANAHTARI)
-        model = genai.GenerativeModel("gemini-2.0-flash")
-
-        # Gemini'ye gonderilecek prompt
-        istem = """Sen bir fitness uzmanı asistanısın. Aşağıdaki spor/egzersiz aktivitesi için
-ortalama bir kişinin yakacağı kaloriyi tahmin et: "{}"
-
-SADECE şu JSON formatında yanıt ver, başka hiçbir açıklama ekleme:
-{{"sure_dk": <dakika>, "yakilan_kalori": <sayı>}}""".format(spor_adi)
+        istem = f"`"Sen bir fitness uzmanısın. Aşağıdaki spor/egzersiz için ortalama bir kişinin yakacağı kaloriyi tahmin et: "{spor_adi}"
+SADECE JSON formatında yanıt ver, başka hiçbir kelime ekleme:
+{{"sure_dk": 30, "yakilan_kalori": 200}}"`"
 
         # API'ye istek gonder
-        yanit = model.generate_content(istem)
-        metin = yanit.text.strip()
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": istem}],
+            model="llama3-8b-8192",
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
 
-        # ```json ... ``` kod blogunu temizle
-        if metin.startswith("```"):
-            metin = metin.strip("`")
-            if metin.lower().startswith("json"):
-                metin = metin[4:]
-        metin = metin.strip()
-
-        # JSON'u parse et
+        metin = chat_completion.choices[0].message.content.strip()
         veri = json.loads(metin)
 
-        # Spor nesnesi olustur
         spor = Spor(
             spor_adi=spor_adi,
             sure_dk=veri.get("sure_dk", 30),
             yakilan_kalori=veri.get("yakilan_kalori", 0),
         )
-        return spor, "Gemini AI ile analiz edildi."
+        return spor, "Yapay Zeka ile analiz edildi."
 
-    except ImportError:
-        return None, "google-generativeai kütüphanesi kurulu değil. 'pip install google-generativeai' çalıştırın."
-    except json.JSONDecodeError:
-        return None, "Gemini yanıtı işlenemedi (geçersiz format)."
     except Exception as hata:
-        return None, "Gemini API hatası: " + str(hata)
-
+        return None, "Yapay Zeka API hatası: " + str(hata)
